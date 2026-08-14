@@ -1,0 +1,18 @@
+{
+  "panels": [
+    {
+      "id": "brush",
+      "side": "LEFT",
+      "mode": "SLIDING",
+      "width": 280,
+      "visible": true
+    },
+    {
+      "id": "layers",
+      "side": "RIGHT",
+      "mode": "SLIDING",
+      "width": 300,
+      "visible": true
+    }
+  ]
+}
