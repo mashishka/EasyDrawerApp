@@ -13,7 +13,9 @@ import com.example.easydrawer.editor.EditorState
 import androidx.compose.ui.geometry.Offset
 import com.example.easydrawer.editor.history.AddStrokeAction
 import com.example.easydrawer.editor.brush.BrushManager
-
+import android.graphics.Canvas as AndroidCanvas
+import android.graphics.Paint
+import androidx.compose.ui.graphics.asImageBitmap
 
 
 @Composable
@@ -156,6 +158,51 @@ fun DrawingCanvas(
             if (layer.visible) {
 
                 layer.objects.forEach { obj ->
+                    when (obj) {
+
+                        is DrawStroke -> {
+
+                            val stroke = obj
+
+                            val path = Path()
+
+                            if (stroke.points.isNotEmpty()) {
+
+                                path.moveTo(
+                                    stroke.points.first().x,
+                                    stroke.points.first().y
+                                )
+
+                                for (point in stroke.points.drop(1)) {
+
+                                    path.lineTo(
+                                        point.x,
+                                        point.y
+                                    )
+                                }
+                            }
+
+                            drawPath(
+                                path = path,
+                                color = stroke.color.copy(
+                                    alpha = stroke.opacity * layer.opacity
+                                ),
+                                style = Stroke(
+                                    width = stroke.width,
+                                    cap = StrokeCap.Round
+                                )
+                            )
+                        }
+
+                        is DrawBitmap -> {
+
+                            drawImage(
+                                image = obj.bitmap.asImageBitmap(),
+                                topLeft = obj.position,
+                                alpha = layer.opacity
+                            )
+                        }
+                    }
 
                     if (obj is DrawStroke) {
 

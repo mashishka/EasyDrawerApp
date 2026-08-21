@@ -36,12 +36,22 @@ import com.example.easydrawer.file.FileSaver
 import com.example.easydrawer.ui.brush.BrushPanel
 import com.example.easydrawer.ui.canvas.DrawingCanvas
 import com.example.easydrawer.ui.layers.LayersPanel
+import com.example.easydrawer.file.PsdExporter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.easydrawer.file.PsdImporter
+import com.example.easydrawer.file.PsdReader
+
+
 
 @Composable
 fun EditorLayout(
     config: LayoutConfig,
     editorState: EditorState
 ) {
+
+    val scope = rememberCoroutineScope()
 
     val context = LocalContext.current
 
@@ -52,6 +62,31 @@ fun EditorLayout(
     val fileSaver = remember {
         FileSaver(repository)
     }
+
+    val psdSaveLauncher =
+        rememberLauncherForActivityResult(
+            contract =
+                ActivityResultContracts.CreateDocument(
+                    "image/vnd.adobe.photoshop"
+                )
+        ) { uri ->
+
+            if (uri != null) {
+
+                scope.launch(Dispatchers.IO) {
+
+                    context.contentResolver
+                        .openOutputStream(uri)
+                        ?.use { output ->
+
+                            PsdExporter().export(
+                                document = editorState.document,
+                                output = output
+                            )
+                        }
+                }
+            }
+        }
 
     val saveLauncher =
         rememberLauncherForActivityResult(
@@ -72,6 +107,40 @@ fun EditorLayout(
                     uri = uri,
                     documentJson = json
                 )
+            }
+        }
+    val pngLauncher =
+        rememberLauncherForActivityResult(
+            contract =
+                ActivityResultContracts.CreateDocument(
+                    "image/png"
+                )
+        ) { uri ->
+
+            if (uri != null) {
+
+                val renderer =
+                    com.example.easydrawer.editor.export.DocumentRenderer()
+
+                val bitmap =
+                    renderer.render(
+                        document =
+                            editorState.document,
+                        width = 1920,
+                        height = 1080
+                    )
+
+                val exporter =
+                    com.example.easydrawer.file.PngExporter(
+                        context
+                    )
+
+                exporter.export(
+                    bitmap = bitmap,
+                    uri = uri
+                )
+
+                bitmap.recycle()
             }
         }
     val openLauncher =
@@ -99,6 +168,48 @@ fun EditorLayout(
                     editorState.loadDocument(
                         document
                     )
+                }
+            }
+        }
+    val psdOpenLauncher =
+        rememberLauncherForActivityResult(
+            contract =
+                ActivityResultContracts.OpenDocument()
+        ) { uri ->
+
+            if (uri != null) {
+
+                scope.launch(
+                    Dispatchers.IO
+                ) {
+
+                    val psdData =
+                        context.contentResolver
+                            .openInputStream(uri)
+                            ?.use { input ->
+
+                                PsdReader(
+                                    input
+                                ).read()
+                            }
+
+                    if (psdData != null) {
+
+                        val document =
+                            PsdImporter()
+                                .import(
+                                    psdData
+                                )
+
+                        launch(
+                            Dispatchers.Main
+                        ) {
+
+                            editorState.loadDocument(
+                                document
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -168,12 +279,44 @@ fun EditorLayout(
             }
             Button(
                 onClick = {
+                    psdSaveLauncher.launch(
+                        "drawing.psd"
+                    )
+                }
+            ) {
+                Text("PSD")
+            }
+            Button(
+                onClick = {
+                    pngLauncher.launch(
+                        "drawing.png"
+                    )
+                }
+            ) {
+                Text("Export PNG")
+            }
+
+            Button(
+                onClick = {
                     openLauncher.launch(
                         arrayOf("application/json")
                     )
                 }
             ) {
                 Text("Open")
+            }
+            Button(
+                onClick = {
+
+                    psdOpenLauncher.launch(
+                        arrayOf(
+                            "image/vnd.adobe.photoshop",
+                            "application/octet-stream"
+                        )
+                    )
+                }
+            ) {
+                Text("Open PSD")
             }
         }
 

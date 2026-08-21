@@ -14,6 +14,8 @@ import com.example.easydrawer.ui.canvas.DrawStroke
 fun Document.toData(): DocumentData {
 
     return DocumentData(
+        width = width,
+        height = height,
         layers = layers.map { layer ->
 
             LayerData(
